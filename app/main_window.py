@@ -1,3 +1,4 @@
+from pathlib import Path
 from PySide6.QtWidgets import (
 	QMainWindow,
 	QWidget,
@@ -10,6 +11,7 @@ from PySide6.QtWidgets import (
 
 
 from .conda_manager import find_conda_environments
+from .tool_registry import ToolRegistry
 
 
 class MainWindow(QMainWindow):
@@ -19,6 +21,10 @@ class MainWindow(QMainWindow):
 
 		self.setWindowTitle('Generic Tool Launcher')
 		self.resize(900, 600)
+
+		self.registry = ToolRegistry(
+			Path(__file__).parent.parent / "programs"
+			)
 
 		self.setup_ui()
 
@@ -41,6 +47,7 @@ class MainWindow(QMainWindow):
 
 		layout.addWidget(title)
 
+		# subtitle
 		subtitle = QLabel(
 			'Launch scientific analysis tools from their respective Conda environments.'
 			)
@@ -55,7 +62,7 @@ class MainWindow(QMainWindow):
 
 		layout.addWidget(subtitle)
 
-
+		'''
 		# deeplabcut
 		dlc_card = self.create_tool_card(
 			'DeepLabCut',
@@ -74,6 +81,15 @@ class MainWindow(QMainWindow):
 			)
 
 		layout.addWidget(simba_card)
+		'''
+
+		# load tools from YAML files
+		tools = self.registry.load_tools()
+
+		for tool in tools:
+			tool_card = self.create_tool_card(tool)
+
+			layout.addWidget(tool_card)
 
 
 		# settings
@@ -86,7 +102,11 @@ class MainWindow(QMainWindow):
 
 
 
-	def create_tool_card(self, name, description, environment):
+	def create_tool_card(self, tool):
+
+		name = tool['name']
+		description = tool['description']
+		environment = tool['environment']
 
 		frame = QFrame()
 		frame.setFrameShape(QFrame.Shape.StyledPanel)
@@ -117,7 +137,7 @@ class MainWindow(QMainWindow):
 		button = QPushButton(f'Open {name}')
 
 		button.clicked.connect(
-			lambda: self.open_tool(name, environment)
+			lambda: self.open_tool(tool)
 			)
 
 		layout.addWidget(button)
@@ -125,7 +145,10 @@ class MainWindow(QMainWindow):
 		return frame
 
 
-	def open_tool(self, name, environment):
+	def open_tool(self, tool):
+
+		name = tool['name']
+		environment = tool['environment']
 
 		environments = find_conda_environments()
 
