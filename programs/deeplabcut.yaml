@@ -1,3 +1,10 @@
 name: DeepLabCut
 description: 'Pose estimation and animal tracking'
+
 environment: 'DEEPLABCUT'
+
+launch:
+  command:
+    - python
+    - -m
+    - deeplabcut

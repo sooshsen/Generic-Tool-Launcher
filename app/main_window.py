@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (
 	QFrame
 	)
 
-
 from .conda_manager import find_conda_environments
 from .tool_registry import ToolRegistry
+from .process_runner import launch_conda_command
 
 
 class MainWindow(QMainWindow):
@@ -71,7 +71,6 @@ class MainWindow(QMainWindow):
 			)
 
 		layout.addWidget(dlc_card)
-
 
 		# simBA
 		simba_card = self.create_tool_card(
@@ -166,6 +165,23 @@ class MainWindow(QMainWindow):
 				)
 			return
 
+		command = tool['launch']['command']
+
+		try:
+			launch_conda_command(
+				environment,
+				command,
+			)
+
+		except Exception as error:
+
+			QMessageBox.critical(
+				self,
+				f"Could not start {name}",
+				str(error),
+			)
+
+		'''
 		QMessageBox.information(
 			self,
 			name,
@@ -174,7 +190,7 @@ class MainWindow(QMainWindow):
 				f"Conda environment: \n{environment}"
 				),
 			)
-
+		'''
 
 	def show_settings(self):
 
