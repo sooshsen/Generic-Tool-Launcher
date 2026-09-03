@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
 		simba_card = self.create_tool_card(
 			'SimBA',
 			'Simple behavior annotation and analysis',
-			'SIMBA'
+			'simBA'
 			)
 
 		layout.addWidget(simba_card)
@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
 
 		if environment not in environments:
 
-			QMessage.warning(
+			QMessageBox.warning(
 				self,
 				'Environment not found',
 				(
