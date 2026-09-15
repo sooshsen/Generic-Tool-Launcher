@@ -13,8 +13,8 @@ including the exact columns (Observation id, Media file path, Time, Behavior, Ev
 
 
 This script can be run both within DEEPLABCUT and simBA conda environments (in command prompt)
->> cd E:/sushmita
->> python annots4simba.py -v path/to/videofile.mp4 -b path/to/anymaze-annotations.csv
+>> cd E:/sushmita/Generic-Tool-Launcher/supplementary
+>> python convertAnymazeAnnotations.py -v path/to/videofile.mp4 -b path/to/anymaze-annotations.csv
 
 '''
 
@@ -25,6 +25,7 @@ warnings.filterwarnings("ignore")
 np.set_printoptions(suppress=True)
 
 import os
+import sys
 from pathlib import Path
 import cv2
 from datetime import datetime, timedelta
@@ -67,6 +68,15 @@ def valid_behavior_file(filename):
 
 	return filepath
 
+def valid_output_path(outpath):
+	
+	# check if exists, if not create one
+	output_path = Path(outpath)
+	output_path.mkdir(parents=True, exist_ok=True)
+
+	return output_path
+
+
 
 
 def verify_fps(video):
@@ -100,7 +110,7 @@ def normalize(text):
 
 def find_behavior(requested, available, cutoff=0.75):
 	# identify behaviors actually present in the ANYMAZE data based on closely matched column names
-	# NOTE: Deals with occasional typos in behavior names
+	# NOTE: Essential to deal with occasional typos in behavior names
 	available_normalized = {
 		normalize(name): name
 		for name in available
@@ -139,6 +149,12 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('-v','--video', type=valid_video_file, help='Path to raw video (.mp4)')
 parser.add_argument('-b','--behavior', type=valid_behavior_file, help='Path to ANYMAZE annotations corresponding to the video (.csv/.xls/.xlsx)')
+parser.add_argument('-o','--output_dir', type=valid_output_path, help='Path to save updated ANYMAZE annotations corresponding to the videos (.csv)')
+
+# print out help if no arguments provided
+if len(sys.argv) == 1:
+	parser.print_help()
+	sys.exit(0)
 
 args = parser.parse_args()
 
@@ -159,12 +175,7 @@ ref_video =  args.video
 # annots_am = pd.read_csv(behavior)
 # ref_video = Path(r"E:\sushmita\TESTING_SIMBA_2_VIDS\vids\batch1_Test 25.mp4")
 
-
-# OUTPUT DIRECTORY
-output_path = Path('E:/sushmita/SIMBA_Annotations/')
-output_path.mkdir(parents=True, exist_ok=True)
-
-
+output_path = args.output_dir
 
 
 ''' --------------------------------------------------------------------------------------------------------

@@ -1,11 +1,23 @@
 # Generic Tool Launcher
 
+<<<<<<< Updated upstream
 ##### The GUI helps access tools required for a pipeline (stored in different Conda environments with differing dependencies) on one platform. It is customizable for different kinds of tools; the current project focuses on DeepLabCut (https://github.com/DeepLabCut/DeepLabCut.git) and SimBA (https://github.com/sgoldenlab/simba.git) for animal pose and behavior estimation.
+=======
+##### This GUI aims to systematically access the tools required for a pipeline via one platform. It is customizable for different pipelines, as per one's needs.
+
+>>>>>>> Stashed changes
 
 ### NOTE: This tool assumes that the respective Conda environments for the involved tools are all set up and working independently.
 
 ## Installation
+<<<<<<< Updated upstream
 This GitHub repository can be downloaded in zipped format; follow the next steps:
+=======
+
+##### Download the zip file from this repo
+
+### WINDOWS Setup:
+>>>>>>> Stashed changes
 
 #### WINDOWS Setup:
 
