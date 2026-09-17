@@ -2,14 +2,16 @@
 setlocal
 
 
-cd /d "%~dp0"
 
+
+echo -------------------------------
+echo Generic Tool Launcher - Setup
+echo -------------------------------
+echo.
+
+cd /d "%~dp0"
 set ENV_NAME=tool-launcher
 
-echo ---------------------------------
-echo Generic Tool Launcher - Setup
-echo ---------------------------------
-echo.
 
 REM ----------------------------------
 REM Check if Conda environment exists
@@ -53,7 +55,7 @@ if %ERRORLEVEL% NEQ 0 (
 echo.
 
 REM ---------------------------
-REM Install requirements
+REM Install dependencies
 REM ---------------------------
 
 echo Installing Python dependencies...
@@ -62,7 +64,7 @@ conda run -n %ENV_NAME% python -m pip install -r requirements.txt
 
 if %ERRORLEVEL% NEQ 0 (
 	echo.
-	echo ERROR: Failed to install dependencies.
+	echo ERROR: Failed to install Python dependencies.
 	exit /b 1
 )
 
@@ -85,10 +87,13 @@ conda run -n %ENV_NAME% python -c "from PySide6 import QtCore; print('QtCore OK 
 if %ERRORLEVEL% NEQ 0 (
 	echo.
 	echo ERROR: PySide6 QtCore test failed.
+	echo.
+	pause
 	exit /b 1
 )
 
 echo.
+
 echo Checking QtWidgets...
 
 conda run -n %ENV_NAME% python -c "from PySide6 import QtWidgets; print('QtWidgets OK')"
@@ -96,6 +101,30 @@ conda run -n %ENV_NAME% python -c "from PySide6 import QtWidgets; print('QtWidge
 if %ERRORLEVEL% NEQ 0 (
 	echo.
 	echo ERROR: PySide6 QtWidgets test failed.
+	echo.
+	pause
+	exit /b 1
+)
+
+echo.
+
+
+REM -----------------------------
+REM Test application import
+REM -----------------------------
+
+echo -------------------------
+echo Testing application
+echo -------------------------
+echo.
+
+conda run -n %ENV_NAME% python -c "import app.main; print('Application import OK')"
+
+if %ERRORLEVEL% NEQ 0 (
+	echo.
+	echo ERROR: Could not impotr app.main
+	echo.
+	pause
 	exit /b 1
 )
 
@@ -112,14 +141,32 @@ echo.
 echo Starting Generic Tool Launcher...
 echo.
 
+echo Running:
+echo conda run -n %ENV_NAME% python -m app.main
+echo.
+
 conda run -n %ENV_NAME% python -m app.main
 
-if %ERRORLEVEL% NEQ 0 (
+set GUI_EXIT_CODE=%ERRORLEVEL%
+
+
+echo.
+echo ------------------
+echo GUI exited
+echo ------------------
+echo.
+echo Exit code: %GUI_EXIT_CODE%
+echo.
+
+if not %GUI_EXIT_CODE% EQU 0 (
 	echo.
 	echo ERROR: GUI exited with an error.
+	echo.
 	pause
-	exit /b 1
 )
 
 
 endlocal
+exit /b %GUI_EXIT_CODE%
+
+

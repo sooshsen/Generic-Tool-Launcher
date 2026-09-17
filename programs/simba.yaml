@@ -1,3 +1,7 @@
 name: SimBA
 description: 'Simple behavior annotation and analysis'
 environment: 'SIMBA'
+
+launch:
+  command:
+    - simba
