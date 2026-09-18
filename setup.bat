@@ -1,7 +1,21 @@
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 
 
+REM Find Conda installation root
+for /f "delims=" %%A in ('conda info --base 2^>nul') do set "CONDA_ROOT=%%A"
+
+if not defined CONDA_ROOT (
+    echo ERROR: Could not determine Conda root directory.
+    pause
+    exit /b 1
+)
+
+echo Conda root - %CONDA_ROOT%
+
+
+cd /d "%~dp0"
+set ENV_NAME=tool-launcher
 
 
 echo -------------------------------
@@ -9,8 +23,42 @@ echo Generic Tool Launcher - Setup
 echo -------------------------------
 echo.
 
-cd /d "%~dp0"
-set ENV_NAME=tool-launcher
+REM ------------------
+REM Initialize Conda
+REM ------------------
+
+echo Initializing Conda...
+
+call "%CONDA_ROOT%\Scripts\activate.bat"
+
+if errorlevel 1 (
+    echo.
+    echo ERROR: Failed to initialize Conda.
+    echo.
+    pause
+    exit /b 1
+)
+
+echo Conda initialized.
+echo.
+
+
+REM ------------
+REM Check Conda
+REM ------------
+
+echo Conda version:
+call conda --version
+
+if errorlevel 1 (
+    echo.
+    echo ERROR: Conda is not working.
+    echo.
+    pause
+    exit /b 1
+)
+
+echo.
 
 
 REM ----------------------------------
@@ -19,7 +67,7 @@ REM ----------------------------------
 
 echo Checking for Conda environment "%ENV_NAME%"...
 
-conda env list | findstr /I /R /C:"^[^#].*%ENV_NAME%" >nul
+call conda env list | findstr /I /R /C:"^[^#].*%ENV_NAME%" >nul
 
 if %ERRORLEVEL% EQU 0 (
 	echo Environment already exists.
@@ -27,7 +75,7 @@ if %ERRORLEVEL% EQU 0 (
 	echo Environment does not exist.
 	echo Creating environment "%ENV_NAME%"...
 
-	conda create -n %ENV_NAME% python=3.13 -y
+	call conda create -n %ENV_NAME% python=3.13 -y
 
 	if %ERRORLEVEL% NEQ 0 (
 		echo.
@@ -44,7 +92,7 @@ REM ---------------------------
 
 echo Upgrading pip...
 
-conda run -n %ENV_NAME% python -m pip install --upgrade pip
+call conda run --no-capture-output -n %ENV_NAME% python -m pip install --upgrade pip
 
 if %ERRORLEVEL% NEQ 0 (
 	echo.
@@ -60,7 +108,7 @@ REM ---------------------------
 
 echo Installing Python dependencies...
 
-conda run -n %ENV_NAME% python -m pip install -r requirements.txt
+call conda run --no-capture-output -n %ENV_NAME% python -m pip install -r requirements.txt
 
 if %ERRORLEVEL% NEQ 0 (
 	echo.
@@ -82,7 +130,7 @@ echo.
 
 echo Checking QtCore...
 
-conda run -n %ENV_NAME% python -c "from PySide6 import QtCore; print('QtCore OK - version:', QtCore.__version__)"
+call conda run --no-capture-output -n %ENV_NAME% python -c "from PySide6 import QtCore; print('QtCore OK - version:', QtCore.__version__)"
 
 if %ERRORLEVEL% NEQ 0 (
 	echo.
@@ -96,7 +144,7 @@ echo.
 
 echo Checking QtWidgets...
 
-conda run -n %ENV_NAME% python -c "from PySide6 import QtWidgets; print('QtWidgets OK')"
+call conda run --no-capture-output -n %ENV_NAME% python -c "from PySide6 import QtWidgets; print('QtWidgets OK')"
 
 if %ERRORLEVEL% NEQ 0 (
 	echo.
@@ -118,17 +166,28 @@ echo Testing application
 echo -------------------------
 echo.
 
-conda run -n %ENV_NAME% python -c "import app.main; print('Application import OK')"
+call conda run --no-capture-output -n "%ENV_NAME%" python -c "import app.main; print('Application import OK')"
 
 if %ERRORLEVEL% NEQ 0 (
 	echo.
-	echo ERROR: Could not impotr app.main
+	echo ERROR: Could not import app.main
 	echo.
 	pause
 	exit /b 1
 )
 
 echo.
+
+echo Testing Qt platform...
+call conda run --no-capture-output -n %ENV_NAME% python -c "from PySide6.QtWidgets import QApplication; import sys; app=QApplication(sys.argv); print('QApplication OK'); print('Platform:', app.platformName()); app.quit()"
+
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo ERROR: QApplication initialization failed.
+    pause
+    exit /b 1
+)
+
 
 REM -------------------
 REM Start GUI
@@ -142,10 +201,7 @@ echo Starting Generic Tool Launcher...
 echo.
 
 echo Running:
-echo conda run -n %ENV_NAME% python -m app.main
-echo.
-
-conda run -n %ENV_NAME% python -m app.main
+call conda run --no-capture-output -n %ENV_NAME% python -m app.main
 
 set GUI_EXIT_CODE=%ERRORLEVEL%
 
