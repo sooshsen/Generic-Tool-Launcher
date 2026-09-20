@@ -1,6 +1,8 @@
 name: DeepLabCut
-description: 'Pose estimation and animal tracking'
-environment: DEEPLABCUT
+description: Pose estimation and animal tracking
+
+detect: 
+  python_module: deeplabcut
 
 launch:
   command:

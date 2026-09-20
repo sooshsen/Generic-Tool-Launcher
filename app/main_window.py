@@ -1,16 +1,8 @@
 from pathlib import Path
-from PySide6.QtWidgets import (
-	QComboBox,
-	QMainWindow,
-	QWidget,
-	QVBoxLayout,
-	QLabel,
-	QPushButton,
-	QMessageBox,
-	QFrame
-	)
+from PySide6.QtWidgets import QComboBox, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox, QFrame
 
-from .conda_manager import find_conda_environments
+
+from .conda_manager import find_environment_for_module
 from .tool_registry import ToolRegistry
 from .process_runner import ProcessRunner
 
@@ -24,9 +16,13 @@ class MainWindow(QMainWindow):
 		self.resize(600, 450)
 
 
-		''' Tool Registry '''
-		self.registry = ToolRegistry(Path(__file__).parent.parent / "programs")
+		''' Store currently selected tool '''
+		self.current_tool = None
+		self.current_environment = None
 
+
+		''' Load available tools '''
+		self.registry = ToolRegistry(Path(__file__).resolve().parent.parent / "programs")
 		# load tool definitions
 		self.tools = self.registry.load_tools()
 
@@ -49,9 +45,7 @@ class MainWindow(QMainWindow):
 		''' Title '''
 		title = QLabel('Generic Tool Launcher')
 		title.setStyleSheet('''
-				font-size: 24px;
-				font-weight: bold; 
-				padding: 10px;
+				font-size: 24px; font-weight: bold; padding: 10px;
 				''')
 		self.layout.addWidget(title)
 
@@ -60,26 +54,23 @@ class MainWindow(QMainWindow):
 		''' Subtitle '''
 		subtitle = QLabel('Launch scientific analysis tools from their respective Conda environments.')
 		subtitle.setStyleSheet('''
-				font-size: 14px;
-				color: #666666; 
-				padding: 0 10px 15px 10px;
+				font-size: 14px; color: #666666; padding: 0 10px 15px 10px;
 			''')
 		self.layout.addWidget(subtitle)
 
 
+		''' Program selector '''
+		program_label = QLabel("Select program")
 
-		''' Conda environment selector '''
-		environment_label = QLabel("Conda Environment")
-		self.environment_dropdown = QComboBox()
-		self.environment_dropdown.addItem("Select an environment...")
-		
-		environments = find_conda_environments()
-		self.environment_dropdown.addItems(environments)
+		self.layout.addWidget(program_label)
+		self.program_dropdown = QComboBox()
+		self.program_dropdown.addItem("Select a program...")
 
-		self.environment_dropdown.currentTextChanged.connect(self.environment_changed)
-		self.layout.addWidget(environment_label)
-		self.layout.addWidget(self.environment_dropdown)
+		for tool in self.tools:
+			self.program_dropdown.addItem(tool['name'], tool)
 
+		self.program_dropdown.currentIndexChanged.connect(self.program_changed)
+		self.layout.addWidget(self.program_dropdown)
 		
 
 		''' Program card container '''
@@ -87,183 +78,242 @@ class MainWindow(QMainWindow):
 		self.layout.addLayout(self.program_container)
         
 		# Show initial message
-		self.show_no_program_message("Select a Conda environment to continue.")
+		self.show_no_program_message("Select a tool to continue.")
 		self.layout.addStretch()
 
 
 	# ======================================================
-	# Environment changed
+	# Program selection
 	# ======================================================
-	def environment_changed(self, environment):
+	def program_changed(self, index):
+		''' called when user selects a tool '''
 
-		# Remove current card
 		self.clear_program_card()
 
-		if (not environment or environment == "Select an environment..."):
-			self.show_no_program_message("Select a Conda environment to continue.")
-			return
-		
-		# Find matching tool
-		matching_tool = None
+		self.current_tool = None
+		self.current_environment = None
 
-		for tool in self.tools:
-			if tool.get("environment") == environment:
-				matching_tool = tool
-				break
-
-		# No matching program
-		if matching_tool is None:
-			self.show_no_program_message(
-				"No program is configured for "
-				f"the '{environment}' environment."
-				)
+		if index <= 0:
+			self.show_no_program_message("Select a program to continue.")
 			return
 
-		# Show program
-		self.show_program_card(matching_tool)
+		tool = self.program_dropdown.itemData(index)
+
+		if not tool:
+			self.show_no_program_message("Selected program could not be loaded.")
+			return
+
+		self.show_program_card(tool)
+
+
 
 
 	# ======================================================
 	# Show program card
 	# ======================================================
 	def show_program_card(self, tool):
+		''' display info about selected tool and search for its CONDA env'''
 
+		self.current_tool = tool
+
+		## CARD ##
 		card = QFrame()
 		card.setFrameShape(QFrame.StyledPanel)
 
 		card.setStyleSheet("""
-			border: 1px solid #cccccc;
-			border-radius: 8px;
-			padding: 10px;
+			border: 1px solid #cccccc; border-radius: 8px; padding: 10px;
 			"""
 			)
 
-		layout = QVBoxLayout(card)
+		card_layout = QVBoxLayout(card)
+		card.setLayout(card_layout)
 
-		# Program title
-		name_label = QLabel(tool["name"])
+
+		## Program title ##
+		name_label = QLabel(tool.get("name", "Unknown Program"))
 		name_label.setStyleSheet("""
-			font-size: 20px;
-			font-weight: bold;
+			font-size: 20px; font-weight: bold;
 			"""
 			)
-		layout.addWidget(name_label)
+		card_layout.addWidget(name_label)
 
 
-		# Description
+		## DESCRIPTION ##
 		description_label = QLabel(tool.get("description",""))
 		description_label.setWordWrap(True)
-		layout.addWidget(description_label)
+		card_layout.addWidget(description_label)
 
 
-		# Selected environment
-		environment_label = QLabel(f"Environment: {tool['environment']}")
-		layout.addWidget(environment_label)
+		## DETECT PROGRAM ##
+		detect_config = tool.get("detect", {})
+		
+		module_name = detect_config.get("python_module")
+		if not module_name:
+			warning_label = QLabel("No program detection method configured!")
+			warning_label.setWordWrap(True)
+			card_layout.addWidget(warning_label)
+
+			status_label = QLabel("Status: Not configured")
+			card_layout.addWidget(status_label)
+
+			self.program_container.addWidget(card)
+
+			return
 
 
-		# Status
-		self.status_label = QLabel("Status: Stopped")
-		layout.addWidget(self.status_label)
+		## SEARCH CONDA ENVS ##
+		environment_label = QLabel("Searching CONDA environments...")
+		card_layout.addWidget(environment_label)
 
+		status_label = QLabel("Status: Searching")
+		card_layout.addWidget(status_label)
 
-		# Launch button
-		self.launch_button = QPushButton(f"Launch {tool['name']}")
-		self.launch_button.clicked.connect(lambda: self.launch_tool(tool))
-		layout.addWidget(self.launch_button)
+		# add card before searching so user sees current status
 		self.program_container.addWidget(card)
 
 
-		# Store current tool
-		self.current_tool = tool
+		## FIND ENV ##
+		environment = find_environment_for_module(module_name)
+
+		self.current_environment = environment
+		if environment:
+			environment_label.setText(f"Environment found: {environment}")
+			status_label.setText("Status: Ready")
+
+			# set launch button
+			launch_button = QPushButton(f"Launch {tool['name']}")
+			launch_button.clicked.connect(lambda: self.launch_tool(tool))
+			card_layout.addWidget(launch_button)
+
+		else:
+			environment_label.setText("Environment found: None")
+			
+			warning_label = QLabel("Program not found in any CONDA environment.")
+			warning_label.setWordWrap(True)
+			card_layout.addWidget(warning_label)
+
+			status_label.setText("Status: Not installed")
+
+
+
+	# ======================================================
+	# Launch Program
+	# ======================================================
+	def launch_tool(self, tool):
+		''' launch selected program inside CONDA env '''
+
+		environment = self.current_environment
+		if not environment:
+			QMessageBox.warning(self, "Environment Not Found", 
+				(f"{tool['name']} was not found in any CONDA environment."))
+			return
+
+		launch_config = tool.get("launch", {})
+
+		command = launch_config.get("command")
+		if not command:
+			QMessageBox.warning(self, "Launch Command Missing",
+				(f"No launch command in configured for {tool['name']}."))
+			return
+
+		self.process_runner.start(environment, command)
+
+
+
+	# ======================================================
+	# Process Started
+	# ======================================================
+	def tool_started(self):
+		''' called when the external program starts '''
+
+		if self.current_tool:
+			print(f"{self.current_tool['name']} started.")
+
+
+
+	# ======================================================
+	# Process Finished
+	# ======================================================
+	def tool_finished(self, exit_code):
+		''' called when the external program exits '''
+
+		if self.current_tool:
+			print(f"{self.current_tool['name']}"
+				f" finished with exit code {exit_code}.")
+
+
+
+	# ======================================================
+	# Process Error
+	# ======================================================
+	def tool_error(self, message):
+		''' called when the QProcess encounters an error '''
+
+		QMessageBox.critical(self, "Program Launch Error", message)
+
+
+
+	# ======================================================
+	# Clear program card
+	# ======================================================
+	def clear_program_card(self):
+		''' remove everything in program card area '''
+
+		while self.program_container.count():
+			item = self.program_container.takeAt(0)
+			widget = item.widget()
+
+			if widget: 
+				widget.deleteLater()
+			else:
+				child_layout = item.layout()
+
+				if child_layout:
+					self.clear_layout(child_layout)
+
+
+	# ======================================================
+	# Clear layout
+	# ======================================================
+	def clear_layout(self, layout):
+		''' recursively clear a Qt layout '''
+
+		while layout.count():
+			item = layout.takeAt(0)
+			widget = item.widget()
+
+			if widget: 
+				widget.deleteLater()
+			else:
+				child_layout = item.layout()
+
+				if child_layout:
+					self.clear_layout(child_layout)
+
+
 
 
 	# ======================================================
 	# No program message
 	# ======================================================
 	def show_no_program_message(self, message):
+		''' display a message no program is selected '''
 
 		label = QLabel(message)
 		label.setWordWrap(True)
 		label.setStyleSheet("""
-			color: #666666;
-			padding: 20px;
+			color: #666666; padding: 20px;
 			"""
 			)
 
 		self.program_container.addWidget(label)
-		self.current_tool = None
-		self.status_label = None
-		self.launch_button = None
-
-	# ======================================================
-	# Clear program card
-	# ======================================================
-	def clear_program_card(self):
-
-		while self.program_container.count():
-			item = self.program_container.takeAt(0)
-			widget = item.widget()
-
-			if widget is not None: widget.deleteLater()
-
-		self.current_tool = None
-		self.status_label = None
-		self.launch_button = None
-
-	# ======================================================
-	# Launch tool
-	# ======================================================
-	def launch_tool(self, tool):
-
-		environment = (self.environment_dropdown.currentText())
-		if not environment:
-			QMessageBox.warning(self, "No Environment", "Please select a Conda environment.")
-			return
-
-		command = tool["launch"]["command"]
-
-		self.process_runner.start(environment, command)
 
 
-	# ======================================================
-	# Process started
-	# ======================================================
-	def tool_started(self):
-
-		if self.status_label is not None:
-			self.status_label.setText("Status: Running")
-
-		if self.launch_button is not None:
-			self.launch_button.setEnabled(False)
 
 
-	# ======================================================
-	# Process finished
-	# ======================================================
-	def tool_finished(self, return_code):
 
-		if self.status_label is not None:
 
-			if return_code == 0:
-				self.status_label.setText("Status: Stopped")
-			else:
-				self.status_label.setText(f"Status: Exited ({return_code})")
 
-		if self.launch_button is not None:
-			self.launch_button.setEnabled(True)
-
-	# ======================================================
-	# Process error
-	# ======================================================
-	def tool_error(self, message):
-
-		if self.status_label is not None:
-			self.status_label.setText("Status: Error")
-
-		if self.launch_button is not None:
-			self.launch_button.setEnabled(True)
-
-		QMessageBox.critical(self, "Launch Error", message)
 
 
 

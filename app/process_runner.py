@@ -18,11 +18,11 @@ class ProcessRunner(QObject):
 	def start(self, environment, command):
 
 		if not environment:
-			self.error.emit("No Conda environment was selected.")
+			self.error.emit("No Conda environment was found.")
 			return
 
 		if not command:
-			self.error.emit("No command was specified.")
+			self.error.emit("No launch command was specified.")
 			return
 
 		# QProcess needs the executable and arguments separately
