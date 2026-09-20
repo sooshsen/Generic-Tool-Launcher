@@ -19,6 +19,7 @@ class MainWindow(QMainWindow):
 		''' Store currently selected tool '''
 		self.current_tool = None
 		self.current_environment = None
+		self.current_status_label = None
 
 
 		''' Load available tools '''
@@ -92,6 +93,7 @@ class MainWindow(QMainWindow):
 
 		self.current_tool = None
 		self.current_environment = None
+		self.current_status_label = None
 
 		if index <= 0:
 			self.show_no_program_message("Select a program to continue.")
@@ -165,7 +167,8 @@ class MainWindow(QMainWindow):
 		environment_label = QLabel("Searching CONDA environments...")
 		card_layout.addWidget(environment_label)
 
-		status_label = QLabel("Status: Searching")
+		status_label = QLabel("Status: Searching...")
+		self.current_status_label = status_label
 		card_layout.addWidget(status_label)
 
 		# add card before searching so user sees current status
@@ -226,6 +229,9 @@ class MainWindow(QMainWindow):
 	def tool_started(self):
 		''' called when the external program starts '''
 
+		if self.current_status_label:
+			self.current_status_label.setText("Status: Running")
+
 		if self.current_tool:
 			print(f"{self.current_tool['name']} started.")
 
@@ -236,6 +242,9 @@ class MainWindow(QMainWindow):
 	# ======================================================
 	def tool_finished(self, exit_code):
 		''' called when the external program exits '''
+
+		if self.current_status_label:
+			self.current_status_label.setText("Status: Stopped")
 
 		if self.current_tool:
 			print(f"{self.current_tool['name']}"
