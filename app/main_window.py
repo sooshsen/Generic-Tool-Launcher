@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
 		''' Title '''
 		title = QLabel('Generic Tool Launcher')
 		title.setStyleSheet('''
-				font-size: 24px; font-weight: bold; padding: 10px;
+				font-size: 24px; font-weight: bold; padding: 5px;
 				''')
 		self.layout.addWidget(title)
 
@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
 		''' Subtitle '''
 		subtitle = QLabel('Launch scientific analysis tools from their respective Conda environments.')
 		subtitle.setStyleSheet('''
-				font-size: 14px; color: #666666; padding: 0 10px 15px 10px;
+				font-size: 14px; color: #666666; padding: 0 5px 15px 5px;
 			''')
 		self.layout.addWidget(subtitle)
 
@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
 		card.setFrameShape(QFrame.StyledPanel)
 
 		card.setStyleSheet("""
-			border: 1px solid #cccccc; border-radius: 8px; padding: 10px;
+			border: 1px solid #cccccc; border-radius: 8px; padding: 5px;
 			"""
 			)
 
@@ -185,6 +185,13 @@ class MainWindow(QMainWindow):
 
 			# set launch button
 			launch_button = QPushButton(f"Launch {tool['name']}")
+			launch_button.setMinimumHeight(60)
+			launch_button.setStyleSheet("""
+				QPushButton {font-weight: bold; padding: 8px 16px;}
+				QPushButton:hover {border: 2px solid;}
+				QPushButton:pressed {padding-top: 10px; padding-left: 17px;}
+				"""
+			)
 			launch_button.clicked.connect(lambda: self.launch_tool(tool))
 			card_layout.addWidget(launch_button)
 
@@ -311,7 +318,7 @@ class MainWindow(QMainWindow):
 		label = QLabel(message)
 		label.setWordWrap(True)
 		label.setStyleSheet("""
-			color: #666666; padding: 20px;
+			color: #666666; padding: 5px;
 			"""
 			)
 
