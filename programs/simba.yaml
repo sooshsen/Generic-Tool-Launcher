@@ -1,6 +1,8 @@
 name: SimBA
 description: 'Simple behavior annotation and analysis'
-environment: 'SIMBA'
+
+detect: 
+  python_module: simba
 
 launch:
   command:

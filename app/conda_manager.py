@@ -70,8 +70,6 @@ def find_environment_for_module(module_name: str,) -> Optional[str]:
 					f"in {env}")
 				return env
 
-			if result.stderr:
-				print(result.stderr)
 
 		except FileNotFoundError:
 			return None
